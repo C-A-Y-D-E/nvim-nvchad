@@ -4,7 +4,16 @@ return {
     event = "BufWritePre",
     opts = require "configs.conform",
   },
-
+  {
+    "nvim-tree/nvim-tree.lua",
+  opts = {
+    filters = {
+      dotfiles = false,
+      git_ignored = false,
+      custom = {},
+    },
+  },
+  },
   {
     "neovim/nvim-lspconfig",
     config = function()

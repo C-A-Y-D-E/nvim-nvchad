@@ -120,3 +120,131 @@ map("n", "<leader>pd", "<cmd>Glance definitions<cr>", { desc = "glance: peek def
 map("n", "<leader>pr", "<cmd>Glance references<cr>", { desc = "glance: peek references" })
 map("n", "<leader>pt", "<cmd>Glance type_definitions<cr>", { desc = "glance: peek type definitions" })
 map("n", "<leader>pi", "<cmd>Glance implementations<cr>", { desc = "glance: peek implementations" })
+
+-- ============================================================
+-- flash.nvim (folke/flash.nvim)
+-- Lightning-fast navigation: press s or S then type characters
+-- to jump anywhere visible on screen. Like a supercharged f/t.
+-- s  → jump to any match (type chars, pick label)
+-- S  → select a treesitter node (select whole functions, blocks, etc.)
+-- ============================================================
+map({ "n", "x", "o" }, "s", function() require("flash").jump() end, { desc = "flash: jump" })
+map({ "n", "x", "o" }, "S", function() require("flash").treesitter() end, { desc = "flash: treesitter select" })
+
+-- ============================================================
+-- trouble.nvim (folke/trouble.nvim)
+-- A pretty list for showing diagnostics (errors/warnings),
+-- references, quickfix items, etc. Think of it as a better
+-- version of the quickfix/location list window.
+-- <leader>xx → all diagnostics across your project
+-- <leader>xX → diagnostics for current file only
+-- <leader>cs → list all symbols (functions, vars, types) in file
+-- <leader>cl → LSP definitions/references in a side panel
+-- <leader>xL → vim's location list in Trouble format
+-- <leader>xQ → vim's quickfix list in Trouble format
+-- ============================================================
+map("n", "<leader>xx", "<cmd>Trouble diagnostics toggle<cr>", { desc = "trouble: project diagnostics" })
+map("n", "<leader>xX", "<cmd>Trouble diagnostics toggle filter.buf=0<cr>", { desc = "trouble: buffer diagnostics" })
+map("n", "<leader>cs", "<cmd>Trouble symbols toggle focus=false<cr>", { desc = "trouble: symbols" })
+map("n", "<leader>cl", "<cmd>Trouble lsp toggle focus=false win.position=right<cr>", { desc = "trouble: LSP defs/refs" })
+map("n", "<leader>xL", "<cmd>Trouble loclist toggle<cr>", { desc = "trouble: location list" })
+map("n", "<leader>xQ", "<cmd>Trouble qflist toggle<cr>", { desc = "trouble: quickfix list" })
+
+-- ============================================================
+-- diffview.nvim (sindrets/diffview.nvim)
+-- Opens a full diff view of all changed files (like a GUI git diff).
+-- Also shows file history (git log) with diffs for each commit.
+-- <leader>gd → toggle the diff view (open if closed, close if open)
+-- <leader>gh → full repo git history (all commits)
+-- <leader>gH → git history for the current file only
+-- ============================================================
+map("n", "<leader>gd", function()
+  local lib = require("diffview.lib")
+  
+  -- Check each open diffview view
+  for _, v in ipairs(lib.views) do
+    if vim.api.nvim_get_current_tabpage() == v.tabpage then
+      -- We're currently in a diffview tab — close it
+      vim.cmd("DiffviewClose")
+      return
+    end
+  end
+  
+  -- Not in a diffview tab. Is one open somewhere?
+  if #lib.views > 0 then
+    -- Focus the existing one instead of creating a new one
+    vim.api.nvim_set_current_tabpage(lib.views[1].tabpage)
+    return
+  end
+  
+  -- No diffview exists — create one
+  vim.cmd("DiffviewOpen")
+end, { desc = "diff: toggle vs main" })
+-- ============================================================
+-- neogit (NeogitOrg/neogit)
+-- A full git UI inside Neovim (like Magit for Emacs).
+-- You can stage, commit, push, pull — all without leaving Neovim.
+-- <leader>gg → open Neogit status (main dashboard, stage/unstage here)
+-- <leader>gc → open commit popup (write commit message)
+-- <leader>gp → git pull (fetch + merge from remote)
+-- <leader>gP → git push (send commits to remote)
+-- <leader>gl → git log (browse commit history)
+-- ============================================================
+map("n", "<leader>gg", "<cmd>Neogit<cr>", { desc = "neogit: open status" })
+map("n", "<leader>gc", "<cmd>Neogit commit<cr>", { desc = "neogit: commit" })
+map("n", "<leader>gp", "<cmd>Neogit pull<cr>", { desc = "neogit: pull" })
+map("n", "<leader>gP", "<cmd>Neogit push<cr>", { desc = "neogit: push" })
+map("n", "<leader>gl", "<cmd>Neogit log<cr>", { desc = "neogit: log" })
+
+-- ============================================================
+-- gitsigns.nvim (lewis6991/gitsigns.nvim)
+-- Shows git change markers in the gutter (added/modified/deleted lines).
+-- Lets you act on individual hunks (chunks of changes) without leaving Neovim.
+-- ]h / [h → jump to next/prev hunk
+-- <leader>ghs → stage hunk (add to git staging area)
+-- <leader>ghr → reset hunk (discard changes, destructive!)
+-- <leader>ghp → preview hunk (see the diff in a popup)
+-- <leader>ghb → blame line (who wrote this line and when)
+-- ============================================================
+map("n", "]h", "<cmd>Gitsigns next_hunk<cr>", { desc = "gitsigns: next hunk" })
+map("n", "[h", "<cmd>Gitsigns prev_hunk<cr>", { desc = "gitsigns: prev hunk" })
+map("n", "<leader>ghs", "<cmd>Gitsigns stage_hunk<cr>", { desc = "gitsigns: stage hunk" })
+map("n", "<leader>ghr", "<cmd>Gitsigns reset_hunk<cr>", { desc = "gitsigns: reset hunk" })
+map("n", "<leader>ghp", "<cmd>Gitsigns preview_hunk<cr>", { desc = "gitsigns: preview hunk" })
+map("n", "<leader>ghb", "<cmd>Gitsigns blame_line full=true<cr>", { desc = "gitsigns: blame line" })
+
+-- ============================================================
+-- snacks.nvim (folke/snacks.nvim)
+-- A collection of small QoL plugins bundled together.
+-- Currently using: smooth scroll, picker (fuzzy finder for projects).
+-- <leader>pf → pick and switch to a project
+-- ============================================================
+map("n", "<leader>pf", function() Snacks.picker.projects() end, { desc = "snacks: projects" })
+
+-- ============================================================
+-- mini.surround (echasnovski/mini.surround)
+-- NOTE: mini.surround keymaps live in lua/plugins/mini-surround.lua
+-- because they are configured through the plugin's own opts.mappings
+-- table, not through vim.keymap.set.
+-- Keys: gsa (add), gsd (delete), gsr (replace), gsf (find),
+--        gsF (find left), gsh (highlight)
+-- Examples: gsaiw" → wrap word in "..."  |  gsd' → delete surrounding '
+-- ============================================================
+--
+
+-- ============================================================
+-- telescope-file-browser
+-- ============================================================
+map("n", "<leader>fb", function()
+  require("telescope").extensions.file_browser.file_browser({
+    path = "%:p:h",
+    select_buffer = true,
+  })
+end, { desc = "file browser: current folder" })
+
+map("n", "<leader>fB", function()
+  require("telescope").extensions.file_browser.file_browser({
+    path = vim.fn.getcwd(),
+  })
+end, { desc = "file browser: project root" })
+

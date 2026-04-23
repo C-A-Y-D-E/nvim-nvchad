@@ -4,21 +4,21 @@ vim.lsp.config("vtsls", {
   settings = {
     typescript = {
       inlayHints = {
-        parameterNames = { enabled = "all" },
-        parameterTypes = { enabled = true },
+        parameterNames = { enabled = "literals" },
+        parameterTypes = { enabled = false},
         variableTypes = { enabled = true },
         propertyDeclarationTypes = { enabled = true },
-        functionLikeReturnTypes = { enabled = true },
+        functionLikeReturnTypes = { enabled = false},
         enumMemberValues = { enabled = true },
       },
     },
     javascript = {
       inlayHints = {
-        parameterNames = { enabled = "all" },
-        parameterTypes = { enabled = true },
+        parameterNames = { enabled = "literals" },
+        parameterTypes = { enabled = false},
         variableTypes = { enabled = true },
         propertyDeclarationTypes = { enabled = true },
-        functionLikeReturnTypes = { enabled = true },
+        functionLikeReturnTypes = { enabled = false},
         enumMemberValues = { enabled = true },
       },
     },
