@@ -158,9 +158,11 @@ map("n", "<leader>xQ", "<cmd>Trouble qflist toggle<cr>", { desc = "trouble: quic
 -- <leader>gh → full repo git history (all commits)
 -- <leader>gH → git history for the current file only
 -- ============================================================
+
+
 map("n", "<leader>gd", function()
   local lib = require("diffview.lib")
-  
+
   -- Check each open diffview view
   for _, v in ipairs(lib.views) do
     if vim.api.nvim_get_current_tabpage() == v.tabpage then
@@ -169,14 +171,14 @@ map("n", "<leader>gd", function()
       return
     end
   end
-  
+
   -- Not in a diffview tab. Is one open somewhere?
   if #lib.views > 0 then
     -- Focus the existing one instead of creating a new one
     vim.api.nvim_set_current_tabpage(lib.views[1].tabpage)
     return
   end
-  
+
   -- No diffview exists — create one
   vim.cmd("DiffviewOpen")
 end, { desc = "diff: toggle vs main" })
