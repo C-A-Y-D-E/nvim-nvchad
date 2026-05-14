@@ -3,13 +3,13 @@ return {
   dependencies = {
     "nvim-lua/plenary.nvim",
     "sindrets/diffview.nvim",
-    "nvim-telescope/telescope.nvim",
+    "folke/snacks.nvim",
   },
   cmd = { "Neogit" },
   opts = {
     integrations = {
       diffview = true,
-      telescope = true,
+      snacks = true,
     },
     graph_style = "unicode",
     disable_commit_confirmation = false,

@@ -3,7 +3,7 @@ return {
   event = "LspAttach",
   dependencies = {
     "nvim-lua/plenary.nvim",
-    "nvim-telescope/telescope.nvim",
+    "folke/snacks.nvim",
   },
   opts = require "configs.tiny-code-action",
 }

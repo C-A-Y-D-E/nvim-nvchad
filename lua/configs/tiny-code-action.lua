@@ -1,6 +1,6 @@
 return {
   backend = "delta",
-  picker = "telescope",
+  picker = "snacks",
   backend_opts = {
     delta = {
       header_lines_to_remove = 4,
@@ -10,7 +10,7 @@ return {
       },
     },
   },
-  resolve_timeout = 100,
+  resolve_timeout = 2000,
   notify = {
     enabled = true,
     on_empty = true,

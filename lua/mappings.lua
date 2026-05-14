@@ -16,57 +16,54 @@ end, { desc = "buffer: close all" })
 map("n", "<leader>bbb", function()
   require("nvchad.tabufline").closeAllBufs(false) -- keep current
 end, { desc = "buffer: close others" })
-map("t", "jk", "<C-\\><C-n>", { desc = "terminal: exit to normal mode" })
 map("n", "<leader>e", function()
-  local api = require "nvim-tree.api"
-  local view = require "nvim-tree.view"
-
-  if view.is_visible() then
-    -- Tree is open
-    if vim.bo.filetype == "NvimTree" then
-      -- Already focused → close
-      api.tree.close()
-    else
-      -- Open but not focused → focus it
-      api.tree.focus()
-    end
-  else
-    -- Not open → open and focus
-    api.tree.open()
-  end
-end, { desc = "nvim-tree: smart toggle" })
+  Snacks.explorer()
+end, { desc = "snacks: explorer toggle" })
 map("n", ";", ":", { desc = "CMD enter command mode" })
 map("i", "jk", "<ESC>")
 map("n", "<C-t>", function()
   require("nvchad.themes").open()
 end, { desc = "Theme picker" })
-map({ "n", "i", "v" }, "<C-s>", "<cmd> w <cr>", { desc = "Save file" })
--- Quick scratch terminal (toggle hide/show)
-map({ "n", "t" }, "<leader>th", function()
-  require("nvchad.term").toggle { pos = "sp", id = "htoggleTerm", size = 0.3 }
-end, { desc = "terminal: toggle scratch horizontal" })
+map("n", "<C-s>", "<cmd>w<cr>", { desc = "Save file" })
+map("i", "<C-s>", "<esc><cmd>w<cr>", { desc = "Save file (exit insert)" })
+map("v", "<C-s>", "<esc><cmd>w<cr>", { desc = "Save file (exit visual)" })
 
-map({ "n", "t" }, "<leader>tv", function()
-  require("nvchad.term").toggle { pos = "vsp", id = "vtoggleTerm", size = 0.3 }
-end, { desc = "terminal: toggle scratch vertical" })
+-- ============================================================
+-- Clipboard
+--   Default behavior: yank/delete share the system clipboard
+--   (vim.opt.clipboard = "unnamedplus" in options.lua).
+--   <leader>cy → toggle clipboard sync on/off (off = isolated vim register)
+--   <leader>y / <leader>Y → explicit yank to system clipboard (works either way)
+--   <leader>p / <leader>P → explicit paste from system clipboard (works either way)
+--   In visual mode `p` pastes over selection WITHOUT overwriting your register.
+-- ============================================================
+map("n", "<leader>cy", function()
+  if vim.opt.clipboard:get()[1] == "unnamedplus" then
+    vim.opt.clipboard = ""
+    vim.notify("clipboard sync: OFF (vim register only)")
+  else
+    vim.opt.clipboard = "unnamedplus"
+    vim.notify("clipboard sync: ON (system clipboard)")
+  end
+end, { desc = "clipboard: toggle system sync" })
+map({ "n", "x" }, "<leader>y", '"+y',  { desc = "clipboard: yank to system" })
+map("n",          "<leader>Y", '"+Y',  { desc = "clipboard: yank line to system" })
+map({ "n", "x" }, "<leader>p", '"+p',  { desc = "clipboard: paste from system (after)" })
+map({ "n", "x" }, "<leader>P", '"+P',  { desc = "clipboard: paste from system (before)" })
+-- Visual paste-over: drop the replaced selection into the black hole so your
+-- register survives. Lets you yank once and paste over many selections.
+map("x", "p", '"_dP', { desc = "paste over selection without yanking it" })
 
-map({ "n", "t" }, "<leader>tf", function()
-  require("nvchad.term").toggle { pos = "float", id = "floatTerm" }
-end, { desc = "terminal: toggle scratch float" })
+-- $ in visual + operator-pending modes: stop at last non-blank char, not the
+-- newline. So v$, d$, y$, c$ never grab the trailing \n.
+map({ "x", "o" }, "$", "g_", { desc = "end of line (excludes newline)" })
 
 -- split window keybindings
 map("n", "<leader>sv", "<C-w>v", { desc = "window: split vertical" })
 map("n", "<leader>sh", "<C-w>s", { desc = "window: split horizontal" })
 map("n", "<leader>sc", "<C-w>c", { desc = "window: close split" })
 map("n", "<leader>so", "<C-w>o", { desc = "window: only (close others)" })
--- New terminal each time (for when you want multiple)
-map("n", "<leader>H", function()
-  require("nvchad.term").new { pos = "sp", size = 0.3 }
-end, { desc = "terminal: new horizontal" })
 
-map("n", "<leader>V", function()
-  require("nvchad.term").new { pos = "vsp", size = 0.3 }
-end, { desc = "terminal: new vertical" })
 -- ============================================================
 -- LSP (native)
 -- ============================================================
@@ -79,7 +76,27 @@ end, { desc = "LSP: toggle inlay hints" })
 -- ============================================================
 map("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "LSP: code action (native)" })
 map({ "n", "x" }, "<leader>ca", function()
-  require("tiny-code-action").code_action()
+  local m = vim.api.nvim_get_mode().mode
+  local in_visual = m == "v" or m == "V" or m == "\22"
+  require("tiny-code-action").code_action({
+    filter = function(action, _)
+      if in_visual or not action.kind then
+        return true
+      end
+      -- vtsls/tsserver advertises extract/rewrite refactors at cursor positions
+      -- where they have no real range to operate on. Resolve either crashes
+      -- ("Expected to find a range to extract" / "Unrecognized action name")
+      -- or returns a valid-looking edit on the wrong tokens. Require a visual
+      -- selection for these kinds.
+      if action.kind:sub(1, 17) == "refactor.extract." then
+        return false
+      end
+      if action.kind:sub(1, 17) == "refactor.rewrite." then
+        return false
+      end
+      return true
+    end,
+  })
 end, { silent = true, desc = "tiny-code-action: code action" })
 
 -- ============================================================
@@ -103,7 +120,10 @@ end, { desc = "todo-comments: next todo" })
 map("n", "[t", function()
   require("todo-comments").jump_prev()
 end, { desc = "todo-comments: prev todo" })
-map("n", "<leader>st", "<cmd>TodoTelescope<cr>", { desc = "todo-comments: search todos" })
+map("n", "<leader>st", function()
+  require("todo-comments") -- ensure snacks source is registered
+  Snacks.picker.todo_comments()
+end, { desc = "todo-comments: search todos" })
 map("n", "<leader>tt", "<cmd>TodoTrouble<cr>", { desc = "todo-comments: todos in trouble" })
 
 -- ============================================================
@@ -202,26 +222,87 @@ map("n", "<leader>gl", "<cmd>Neogit log<cr>", { desc = "neogit: log" })
 -- gitsigns.nvim (lewis6991/gitsigns.nvim)
 -- Shows git change markers in the gutter (added/modified/deleted lines).
 -- Lets you act on individual hunks (chunks of changes) without leaving Neovim.
--- ]h / [h → jump to next/prev hunk
--- <leader>ghs → stage hunk (add to git staging area)
--- <leader>ghr → reset hunk (discard changes, destructive!)
--- <leader>ghp → preview hunk (see the diff in a popup)
--- <leader>ghb → blame line (who wrote this line and when)
+-- ]h / [h     → jump to next/prev hunk
+-- <leader>ghs → stage hunk (n) or stage selected lines (v)
+-- <leader>ghr → reset hunk (n) or reset selected lines (v) — undoes changes
+-- <leader>ghR → reset whole file (undo all unsaved changes vs HEAD)
+-- <leader>ghu → undo last stage
+-- <leader>ghp → preview hunk diff in popup
+-- <leader>ghb → blame line (full)
 -- ============================================================
 map("n", "]h", "<cmd>Gitsigns next_hunk<cr>", { desc = "gitsigns: next hunk" })
 map("n", "[h", "<cmd>Gitsigns prev_hunk<cr>", { desc = "gitsigns: prev hunk" })
 map("n", "<leader>ghs", "<cmd>Gitsigns stage_hunk<cr>", { desc = "gitsigns: stage hunk" })
+map("v", "<leader>ghs", function()
+  require("gitsigns").stage_hunk { vim.fn.line("."), vim.fn.line("v") }
+end, { desc = "gitsigns: stage selected lines" })
 map("n", "<leader>ghr", "<cmd>Gitsigns reset_hunk<cr>", { desc = "gitsigns: reset hunk" })
+map("v", "<leader>ghr", function()
+  require("gitsigns").reset_hunk { vim.fn.line("."), vim.fn.line("v") }
+end, { desc = "gitsigns: reset selected lines" })
+map("n", "<leader>ghR", "<cmd>Gitsigns reset_buffer<cr>", { desc = "gitsigns: reset whole file" })
+map("n", "<leader>ghu", "<cmd>Gitsigns undo_stage_hunk<cr>", { desc = "gitsigns: undo last stage" })
 map("n", "<leader>ghp", "<cmd>Gitsigns preview_hunk<cr>", { desc = "gitsigns: preview hunk" })
 map("n", "<leader>ghb", "<cmd>Gitsigns blame_line full=true<cr>", { desc = "gitsigns: blame line" })
 
 -- ============================================================
 -- snacks.nvim (folke/snacks.nvim)
--- A collection of small QoL plugins bundled together.
--- Currently using: smooth scroll, picker (fuzzy finder for projects).
--- <leader>pf → pick and switch to a project
+-- Smooth scroll + picker (fuzzy finder, file browser, grep, etc.)
+-- File pickers
+--   <leader>ff → find files (cwd)
+--   <leader>fg → live grep (cwd)
+--   <leader>fr → recent files
+--   <leader>fw → grep word under cursor
+--   <leader>fb → buffers
+--   <leader>fh → help tags
+--   <leader>fk → keymaps
+--   <leader>fc → commands
+--   <leader>f: → command history
+--   <leader>fR → resume last picker
+-- Explorer / project
+--   <leader>fe → explorer (current file's folder)
+--   <leader>fE → explorer (project root)
+--   <leader>pf → pick and switch project
+-- LSP / diagnostics
+--   <leader>fd → diagnostics (project)
+--   <leader>fD → diagnostics (buffer)
+--   <leader>fs → LSP document symbols
+--   <leader>fS → LSP workspace symbols
+-- Git
+--   <leader>fG → git status (changed files)
+--   <leader>fl → git log
+--   <leader>fL → git log (current file)
 -- ============================================================
-map("n", "<leader>pf", function() Snacks.picker.projects() end, { desc = "snacks: projects" })
+map("n", "<leader>ff", function() Snacks.picker.files() end, { desc = "picker: files" })
+map("n", "<leader>fg", function() Snacks.picker.grep() end, { desc = "picker: live grep" })
+map("n", "<leader>fr", function() Snacks.picker.recent() end, { desc = "picker: recent files" })
+map({ "n", "x" }, "<leader>fw", function() Snacks.picker.grep_word() end, { desc = "picker: grep word" })
+map("n", "<leader>fb", function() Snacks.picker.buffers() end, { desc = "picker: buffers" })
+map("n", "<leader>fh", function() Snacks.picker.help() end, { desc = "picker: help tags" })
+map("n", "<leader>fk", function() Snacks.picker.keymaps() end, { desc = "picker: keymaps" })
+map("n", "<leader>fc", function() Snacks.picker.commands() end, { desc = "picker: commands" })
+map("n", "<leader>f:", function() Snacks.picker.command_history() end, { desc = "picker: command history" })
+map("n", "<leader>fR", function() Snacks.picker.resume() end, { desc = "picker: resume last" })
+
+map("n", "<leader>fe", function()
+  Snacks.explorer({ cwd = vim.fn.expand("%:p:h") })
+end, { desc = "explorer: current folder" })
+map("n", "<leader>fE", function()
+  Snacks.explorer({ cwd = vim.fn.getcwd() })
+end, { desc = "explorer: project root" })
+map("n", "<leader>pf", function() Snacks.picker.projects() end, { desc = "picker: projects" })
+
+map("n", "<leader>fd", function() Snacks.picker.diagnostics() end, { desc = "picker: diagnostics" })
+map("n", "<leader>fD", function() Snacks.picker.diagnostics_buffer() end, { desc = "picker: diagnostics buffer" })
+map("n", "<leader>fs", function() Snacks.picker.lsp_symbols() end, { desc = "picker: document symbols" })
+map("n", "<leader>fS", function() Snacks.picker.lsp_workspace_symbols() end, { desc = "picker: workspace symbols" })
+
+map("n", "<leader>fG", function() Snacks.picker.git_status() end, { desc = "picker: git status" })
+map("n", "<leader>fl", function() Snacks.picker.git_log() end, { desc = "picker: git log" })
+map("n", "<leader>fL", function() Snacks.picker.git_log_file() end, { desc = "picker: git log (file)" })
+map("n", "<leader>fbr", function() Snacks.picker.git_branches() end, { desc = "picker: git branches" })
+map("n", "<leader>fdf", function() Snacks.picker.git_diff() end, { desc = "picker: git diff (hunks)" })
+map("n", "<leader>fgf", function() Snacks.picker.git_files() end, { desc = "picker: git files" })
 
 -- ============================================================
 -- mini.surround (echasnovski/mini.surround)
@@ -233,20 +314,4 @@ map("n", "<leader>pf", function() Snacks.picker.projects() end, { desc = "snacks
 -- Examples: gsaiw" → wrap word in "..."  |  gsd' → delete surrounding '
 -- ============================================================
 --
-
--- ============================================================
--- telescope-file-browser
--- ============================================================
-map("n", "<leader>fb", function()
-  require("telescope").extensions.file_browser.file_browser({
-    path = "%:p:h",
-    select_buffer = true,
-  })
-end, { desc = "file browser: current folder" })
-
-map("n", "<leader>fB", function()
-  require("telescope").extensions.file_browser.file_browser({
-    path = vim.fn.getcwd(),
-  })
-end, { desc = "file browser: project root" })
 
